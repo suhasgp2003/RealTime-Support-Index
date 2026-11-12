@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+<body>
+  <h1>Conversation {{ conversation_id }}</h1>
+  <ul id="log"></ul>
+  <input id="box" placeholder="Type a message">
+  <button id="send">Send</button>
+
+  <script>
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const socket = new WebSocket(`${proto}://${location.host}/ws/conversations/{{ conversation_id }}/`);
+
+    socket.onmessage = (e) => {
+      const li = document.createElement("li");
+      li.textContent = JSON.parse(e.data).body;
+      document.getElementById("log").appendChild(li);
+    };
+
+    document.getElementById("send").onclick = () => {
+      const box = document.getElementById("box");
+      socket.send(JSON.stringify({ body: box.value }));
+      box.value = "";
+    };
+  </script>
+</body>
+</html>
