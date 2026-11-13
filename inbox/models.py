@@ -34,6 +34,7 @@ class Message(models.Model):
     sender_type = models.CharField(max_length=10, choices=Sender.choices)
     body = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    external_id = models.CharField(max_length=200, unique=True, null=True, blank=True)
 
     class Meta:
         ordering = ["created_at"]

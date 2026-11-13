@@ -147,3 +147,5 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+INGEST_SECRET = os.environ.get("INGEST_SECRET", "")
