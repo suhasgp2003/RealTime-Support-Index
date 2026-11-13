@@ -1,26 +1,35 @@
 <!doctype html>
 <html>
-<body>
+<body data-conversation-id="{{ conversation_id }}">
   <h1>Conversation {{ conversation_id }}</h1>
   <ul id="log"></ul>
   <input id="box" placeholder="Type a message">
   <button id="send">Send</button>
 
   <script>
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    const socket = new WebSocket(`${proto}://${location.host}/ws/conversations/{{ conversation_id }}/`);
+  const id = Number(document.body.dataset.conversationId);
+  const log = document.getElementById("log");
+  const show = (m) => {
+    const li = document.createElement("li");
+    li.textContent = `${m.sender_type}: ${m.body}`;
+    log.appendChild(li);
+  };
 
-    socket.onmessage = (e) => {
-      const li = document.createElement("li");
-      li.textContent = JSON.parse(e.data).body;
-      document.getElementById("log").appendChild(li);
-    };
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const socket = new WebSocket(`${proto}://${location.host}/ws/conversations/${id}/`);
+  socket.onmessage = (e) => show(JSON.parse(e.data));
 
-    document.getElementById("send").onclick = () => {
-      const box = document.getElementById("box");
-      socket.send(JSON.stringify({ body: box.value }));
-      box.value = "";
-    };
+  fetch(`/api/conversations/${id}/messages/`).then(r => r.json()).then(list => list.forEach(show));
+
+  document.getElementById("send").onclick = async () => {
+    const box = document.getElementById("box");
+    await fetch(`/api/conversations/${id}/messages/`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({sender_type: "agent", body: box.value}),
+    });
+    box.value = "";
+  };
   </script>
 </body>
 </html>
