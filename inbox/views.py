@@ -1,21 +1,30 @@
 import hmac
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, render
 from rest_framework import generics, serializers
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Conversation, Message
 from .serializers import MessageSerializer
-from .services import broadcast_message
-from django.contrib.auth.decorators import login_required
-from rest_framework.permissions import IsAuthenticated
+from .services import broadcast_assignment, broadcast_message
+
 
 @login_required
 def conversation_page(request, conversation_id):
-    return render(request, "inbox/conversation.html", {"conversation_id": conversation_id})
+    conversation = get_object_or_404(
+        Conversation.objects.select_related("assigned_to"), pk=conversation_id
+    )
+    owner = conversation.assigned_to.get_username() if conversation.assigned_to else "nobody"
+    return render(
+        request,
+        "inbox/conversation.html",
+        {"conversation_id": conversation_id, "owner": owner},
+    )
 
 
 class MessageListCreate(generics.ListCreateAPIView):
@@ -31,6 +40,29 @@ class MessageListCreate(generics.ListCreateAPIView):
             conversation=conversation, sender_type=Message.Sender.AGENT
         )
         broadcast_message(message)
+
+
+class AssignConversation(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, conversation_id):
+        get_object_or_404(Conversation, pk=conversation_id)
+
+        # one atomic UPDATE: succeeds only if nobody owns it yet
+        claimed = Conversation.objects.filter(
+            pk=conversation_id, assigned_to__isnull=True
+        ).update(assigned_to=request.user)
+
+        conversation = Conversation.objects.select_related("assigned_to").get(pk=conversation_id)
+
+        if not claimed and conversation.assigned_to_id != request.user.id:
+            return Response(
+                {"detail": f"Already assigned to {conversation.assigned_to.get_username()}"},
+                status=409,
+            )
+        if claimed:
+            broadcast_assignment(conversation)
+        return Response({"assigned_to": conversation.assigned_to.get_username()})
 
 
 class InboundSerializer(serializers.Serializer):

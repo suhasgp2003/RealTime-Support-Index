@@ -5,4 +5,5 @@ urlpatterns = [
     path("conversations/<int:conversation_id>/", views.conversation_page),
     path("api/conversations/<int:conversation_id>/messages/", views.MessageListCreate.as_view()),
     path("api/ingest/webhook/", views.InboundWebhook.as_view()),
+    path("api/conversations/<int:conversation_id>/assign/", views.AssignConversation.as_view()),
 ]

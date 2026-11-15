@@ -20,3 +20,6 @@ class ConversationConsumer(AsyncJsonWebsocketConsumer):
     async def chat_message(self, event):
         # called for every group member when group_send fires
         await self.send_json(event["message"])
+
+    async def conversation_assigned(self, event):
+        await self.send_json({"type": "assigned", "assigned_to": event["assigned_to"]})    

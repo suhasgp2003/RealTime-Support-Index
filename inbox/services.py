@@ -13,3 +13,12 @@ def broadcast_message(message):
             group, {"type": "chat.message", "message": payload}
         )
     )
+
+def broadcast_assignment(conversation):
+    group = f"conversation_{conversation.id}"
+    username = conversation.assigned_to.get_username() if conversation.assigned_to else None
+    transaction.on_commit(
+        lambda: async_to_sync(get_channel_layer().group_send)(
+            group, {"type": "conversation.assigned", "assigned_to": username}
+        )
+    )    
