@@ -11,6 +11,7 @@ from .models import Conversation, Message
 from .serializers import MessageSerializer
 from .services import broadcast_message
 from django.contrib.auth.decorators import login_required
+from rest_framework.permissions import IsAuthenticated
 
 @login_required
 def conversation_page(request, conversation_id):
@@ -19,15 +20,16 @@ def conversation_page(request, conversation_id):
 
 class MessageListCreate(generics.ListCreateAPIView):
     serializer_class = MessageSerializer
-    authentication_classes = []   # TEMPORARY: step 7 adds real auth
-    permission_classes = []       # TEMPORARY
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         return Message.objects.filter(conversation_id=self.kwargs["conversation_id"])
 
     def perform_create(self, serializer):
         conversation = get_object_or_404(Conversation, pk=self.kwargs["conversation_id"])
-        message = serializer.save(conversation=conversation)
+        message = serializer.save(
+            conversation=conversation, sender_type=Message.Sender.AGENT
+        )
         broadcast_message(message)
 
 

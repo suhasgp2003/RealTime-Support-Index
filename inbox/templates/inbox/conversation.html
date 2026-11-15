@@ -1,6 +1,6 @@
 <!doctype html>
 <html>
-<body data-conversation-id="{{ conversation_id }}">
+<body data-conversation-id="{{ conversation_id }}" data-csrf="{{ csrf_token }}">
   <h1>Conversation {{ conversation_id }}</h1>
   <ul id="log"></ul>
   <input id="box" placeholder="Type a message">
@@ -8,6 +8,7 @@
 
   <script>
   const id = Number(document.body.dataset.conversationId);
+  const csrf = document.body.dataset.csrf;
   const log = document.getElementById("log");
   const show = (m) => {
     const li = document.createElement("li");
@@ -24,9 +25,9 @@
   document.getElementById("send").onclick = async () => {
     const box = document.getElementById("box");
     await fetch(`/api/conversations/${id}/messages/`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({sender_type: "agent", body: box.value}),
+     method: "POST",
+     headers: {"Content-Type": "application/json", "X-CSRFToken": csrf},
+     body: JSON.stringify({body: box.value}),
     });
     box.value = "";
   };
