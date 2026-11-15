@@ -10,8 +10,9 @@ from rest_framework.views import APIView
 from .models import Conversation, Message
 from .serializers import MessageSerializer
 from .services import broadcast_message
+from django.contrib.auth.decorators import login_required
 
-
+@login_required
 def conversation_page(request, conversation_id):
     return render(request, "inbox/conversation.html", {"conversation_id": conversation_id})
 
