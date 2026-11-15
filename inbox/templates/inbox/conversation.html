@@ -12,24 +12,41 @@
   const id = Number(document.body.dataset.conversationId);
   const csrf = document.body.dataset.csrf;
   const log = document.getElementById("log");
+
+  const seen = new Set();
+  let lastId = 0;
   const show = (m) => {
+    if (seen.has(m.id)) return;          // ignore duplicates
+    seen.add(m.id);
+    lastId = Math.max(lastId, m.id);
     const li = document.createElement("li");
     li.textContent = `${m.sender_type}: ${m.body}`;
     log.appendChild(li);
   };
 
-  const proto = location.protocol === "https:" ? "wss" : "ws";
-  const socket = new WebSocket(`${proto}://${location.host}/ws/conversations/${id}/`);
-  socket.onmessage = (e) => {
-    const data = JSON.parse(e.data);
-    if (data.type === "assigned") {
-      document.getElementById("owner").textContent = data.assigned_to;
-    } else {
-      show(data);
-    }
-  };
+  async function sync() {
+    const res = await fetch(`/api/conversations/${id}/messages/?after=${lastId}`);
+    if (res.ok) (await res.json()).forEach(show);
+  }
 
-  fetch(`/api/conversations/${id}/messages/`).then(r => r.json()).then(list => list.forEach(show));
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  let retry = 0;
+  function connect() {
+    const socket = new WebSocket(`${proto}://${location.host}/ws/conversations/${id}/`);
+    socket.onopen = () => { retry = 0; sync(); };
+    socket.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+      if (data.type === "assigned") {
+        document.getElementById("owner").textContent = data.assigned_to;
+      } else {
+        show(data);
+      }
+    };
+    socket.onclose = () => {
+      setTimeout(connect, Math.min(1000 * 2 ** retry++, 10000));
+    };
+  }
+  connect();
 
   document.getElementById("send").onclick = async () => {
     const box = document.getElementById("box");

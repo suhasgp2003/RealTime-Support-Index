@@ -32,8 +32,11 @@ class MessageListCreate(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Message.objects.filter(conversation_id=self.kwargs["conversation_id"])
-
+        qs = Message.objects.filter(conversation_id=self.kwargs["conversation_id"])
+        after = self.request.query_params.get("after")
+        if after and after.isdigit():
+            qs = qs.filter(id__gt=int(after))
+        return qs
     def perform_create(self, serializer):
         conversation = get_object_or_404(Conversation, pk=self.kwargs["conversation_id"])
         message = serializer.save(
